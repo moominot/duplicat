@@ -1,7 +1,7 @@
 const CACHE_NAME = 'scrabble-duplicat-v1';
 const urlsToCache = [
-  '/DuplicadaScrabble/',
-  '/DuplicadaScrabble/index.html',
+  '/duplicat/',
+  '/duplicat/index.html',
 ];
 
 // Instal·lació del Service Worker
