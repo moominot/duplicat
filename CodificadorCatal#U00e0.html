@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codificador Trie Succinte (Català)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track { background: #f1f1f1; }
+        textarea::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="text-center space-y-2">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800">Codificador Trie Succinte</h1>
+            <p class="text-slate-600">Generador ràpid de diccionaris (verificador, wordertorn, DupliCat). Optimitzat per a fitxers grans.</p>
+        </header>
+
+        <!-- Main Card -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+            
+            <!-- Step 1: Input -->
+            <div class="p-6 border-b border-slate-100">
+                <h2 class="text-xl font-semibold text-slate-700 flex items-center gap-2">
+                    <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                    Configuració i Càrrega
+                </h2>
+
+                <!-- Configuration Inputs -->
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-slate-700">Nom del fitxer de sortida</label>
+                        <input type="text" id="dictName" value="diccionari" placeholder="ex: catalan_dict" 
+                            class="block w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <p class="mt-1 text-xs text-slate-400">El fitxer es descarregarà com a .json</p>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-slate-700">Versió del diccionari</label>
+                        <input type="text" id="dictVersion" value="1.0" placeholder="ex: 1.0" 
+                            class="block w-full p-2.5 text-sm text-slate-700 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <p class="mt-1 text-xs text-slate-400">S'inclourà com a clau dins del JSON</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 bg-blue-50 text-blue-800 p-4 rounded-lg text-sm border border-blue-100">
+                    <p class="font-bold mb-2">Regles de conversió (s'apliquen automàticament):</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div class="bg-white px-3 py-1 rounded border border-blue-200 text-center">QU &rarr; Q</div>
+                        <div class="bg-white px-3 py-1 rounded border border-blue-200 text-center">L·L &rarr; 2</div>
+                        <div class="bg-white px-3 py-1 rounded border border-blue-200 text-center">NY &rarr; 3</div>
+                        <div class="bg-white px-3 py-1 rounded border border-blue-200 text-center">Ç &rarr; 1</div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block mb-2 text-sm font-medium text-slate-700">Selecciona el fitxer .txt amb la llista de paraules</label>
+                    <input type="file" id="fileInput" accept=".txt" 
+                        class="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2.5 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-slate-800 file:text-white
+                        hover:file:bg-slate-700 cursor-pointer border rounded-lg bg-slate-50 border-slate-300 transition-colors"
+                    />
+                    <div id="processingStatus" class="mt-2 text-sm font-medium hidden"></div>
+                </div>
+            </div>
+
+            <!-- Step 2: Output -->
+            <div class="p-6 bg-slate-50 border-b border-slate-100 hidden" id="outputSection">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-slate-700 flex items-center gap-2">
+                        <span class="bg-green-100 text-green-700 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                        Resultat JSON
+                    </h2>
+                    <button id="downloadBtn" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Descarregar JSON
+                    </button>
+                </div>
+                <textarea id="outputArea" readonly class="w-full h-48 p-4 text-xs font-mono border border-slate-300 rounded-lg bg-white text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y" onclick="this.select()"></textarea>
+                <p class="text-xs text-slate-500 mt-2 text-right">Fes clic per seleccionar tot el text.</p>
+            </div>
+
+            <!-- Step 3: Verification -->
+            <div class="p-6 hidden" id="verifySection">
+                <h2 class="text-xl font-semibold text-slate-700 flex items-center gap-2 mb-4">
+                    <span class="bg-purple-100 text-purple-700 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+                    Verificar Diccionari Generat
+                </h2>
+                
+                <div class="flex gap-3">
+                    <input type="text" id="verifyInput" placeholder="Escriu una paraula (ex: Pinya, Col·legi)" 
+                        class="flex-1 p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                    />
+                    <button id="verifyBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors shadow-sm">
+                        Comprovar
+                    </button>
+                </div>
+                <div id="verifyResult" class="mt-4 hidden"></div>
+            </div>
+        </div>
+
+        <footer class="text-center text-slate-400 text-sm pb-4">
+            Succinct Trie Algorithm portat a JS. Execució local sense servidor.
+        </footer>
+    </div>
+
+<script>
+/**
+ * LÒGICA DE CONVERSIÓ I ESTRUCTURES DE DADES (SUCCINCT TRIE)
+ * Basat en el treball de Steve Hanov.
+ */
+
+const BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const W = 6;
+const L1 = 32 * 32;
+const L2 = 32;
+
+// --- Helpers ---
+function CHR(id) { return BASE64[id]; }
+function ORD(ch) { return BASE64.indexOf(ch); }
+
+// --- BitWriter ---
+class BitWriter {
+    constructor() { this.bits = []; }
+    write(data, numBits) {
+        for (let i = numBits - 1; i >= 0; i--) {
+            this.bits.push((data & (1 << i)) ? 1 : 0);
+        }
+    }
+    getData() {
+        let chars = [];
+        let b = 0, i = 0;
+        const len = this.bits.length;
+        for (let j = 0; j < len; j++) {
+            b = (b << 1) | this.bits[j];
+            i++;
+            if (i === W) { chars.push(CHR(b)); i = b = 0; }
+        }
+        if (i) chars.push(CHR(b << (W - i)));
+        return chars.join("");
+    }
+}
+
+// --- BitString ---
+class BitString {
+    constructor(str) {
+        this.bytes = str;
+        this.length = this.bytes.length * W;
+    }
+    getData() {
+        return this.bytes;
+    }
+    get(p, n) {
+        const idx = (p / W) | 0; // Optimization: bitwise floor
+        const rem = p % W;
+        if (rem + n <= W) {
+            return (ORD(this.bytes[idx]) & BitString.MaskTop[rem]) >> (W - rem - n);
+        } else {
+            let result = (ORD(this.bytes[idx]) & BitString.MaskTop[rem]);
+            let l = W - rem;
+            p += l; n -= l;
+            while (n >= W) {
+                result = (result << W) | ORD(this.bytes[(p / W) | 0]);
+                p += W; n -= W;
+            }
+            if (n > 0) {
+                result = (result << n) | (ORD(this.bytes[(p / W) | 0]) >> (W - n));
+            }
+            return result;
+        }
+    }
+    count(p, n) {
+        let count = 0;
+        while (n >= 8) {
+            count += BitString.BitsInByte[this.get(p, 8)];
+            p += 8; n -= 8;
+        }
+        return count + BitString.BitsInByte[this.get(p, n)];
+    }
+    rank(x) {
+        let rank = 0;
+        for (let i = 0; i <= x; i++) if (this.get(i, 1)) rank++;
+        return rank;
+    }
+}
+BitString.MaskTop = [0x3f, 0x1f, 0x0f, 0x07, 0x03, 0x01, 0x00];
+BitString.BitsInByte = [
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2,
+    3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3,
+    3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3,
+    4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4,
+    3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5,
+    6, 6, 7, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4,
+    4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5,
+    6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 2, 3, 3, 4, 3, 4, 4, 5,
+    3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 3,
+    4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6,
+    6, 7, 6, 7, 7, 8
+];
+
+// --- RankDirectory ---
+class RankDirectory {
+    constructor(directoryData, bitData, numBits, l1Size, l2Size) {
+        this.directory = new BitString(directoryData);
+        this.data = new BitString(bitData);
+        this.l1Size = l1Size;
+        this.l2Size = l2Size;
+        this.l1Bits = Math.ceil(Math.log(numBits) / Math.log(2));
+        this.l2Bits = Math.ceil(Math.log(l1Size) / Math.log(2));
+        this.sectionBits = (l1Size / l2Size - 1) * this.l2Bits + this.l1Bits;
+        this.numBits = numBits;
+    }
+    
+    getData() {
+        return this.directory.getData();
+    }
+    
+    static Create(data, numBits, l1Size, l2Size) {
+        const bits = new BitString(data);
+        let p = 0, i = 0, count1 = 0, count2 = 0;
+        const l1bits = Math.ceil(Math.log(numBits) / Math.log(2));
+        const l2bits = Math.ceil(Math.log(l1Size) / Math.log(2));
+        const directory = new BitWriter();
+        
+        while (p + l2Size <= numBits) {
+            count2 += bits.count(p, l2Size);
+            i += l2Size; p += l2Size;
+            if (i === l1Size) {
+                count1 += count2;
+                directory.write(count1, l1bits);
+                count2 = 0; i = 0;
+            } else {
+                directory.write(count2, l2bits);
+            }
+        }
+        return new RankDirectory(directory.getData(), data, numBits, l1Size, l2Size);
+    }
+    rank(which, x) {
+        if (which === 0) return x - this.rank(1, x) + 1;
+        let rank = 0, o = x, sectionPos = 0;
+        if (o >= this.l1Size) {
+            sectionPos = (o / this.l1Size | 0) * this.sectionBits;
+            rank = this.directory.get(sectionPos - this.l1Bits, this.l1Bits);
+            o = o % this.l1Size;
+        }
+        if (o >= this.l2Size) {
+            sectionPos += (o / this.l2Size | 0) * this.l2Bits;
+            rank += this.directory.get(sectionPos - this.l2Bits, this.l2Bits);
+        }
+        rank += this.data.count(x - x % this.l2Size, x % this.l2Size + 1);
+        return rank;
+    }
+    select(which, y) {
+        let high = this.numBits, low = -1, val = -1;
+        while (high - low > 1) {
+            const probe = (high + low) / 2 | 0;
+            const r = this.rank(which, probe);
+            if (r === y) { val = probe; high = probe; }
+            else if (r < y) low = probe;
+            else high = probe;
+        }
+        return val;
+    }
+}
+
+// --- Trie (Encoding) ---
+class TrieNode {
+    constructor(letter) {
+        this.letter = letter;
+        this.final = false;
+        this.children = [];
+    }
+}
+
+class Trie {
+    constructor() {
+        this.previousWord = "";
+        this.root = new TrieNode(' ');
+        this.cache = [this.root];
+        this.nodeCount = 1;
+    }
+    getNodeCount() { return this.nodeCount; }
+    insert(word) {
+        let commonPrefix = 0;
+        const limit = Math.min(word.length, this.previousWord.length);
+        
+        // Manual loop for speed
+        for (let i = 0; i < limit; i++) {
+            if (word[i] !== this.previousWord[i]) break;
+            commonPrefix++;
+        }
+
+        this.cache.length = commonPrefix + 1;
+        let node = this.cache[this.cache.length - 1];
+        
+        const len = word.length;
+        for (let i = commonPrefix; i < len; i++) {
+            const next = new TrieNode(word[i]);
+            this.nodeCount++;
+            node.children.push(next);
+            this.cache.push(next);
+            node = next;
+        }
+        node.final = true;
+        this.previousWord = word;
+    }
+    apply(fn) {
+        const level = [this.root];
+        while (level.length > 0) {
+            const node = level.shift();
+            const len = node.children.length;
+            for (let i = 0; i < len; i++) level.push(node.children[i]);
+            fn(node);
+        }
+    }
+    encode() {
+        const bits = new BitWriter();
+        bits.write(0x02, 2);
+        this.apply(node => {
+            const len = node.children.length;
+            for (let i = 0; i < len; i++) bits.write(1, 1);
+            bits.write(0, 1);
+        });
+        this.apply(node => {
+            const v = node.letter.charCodeAt(0);
+            const value = (v < 60) ? (v - 48) : (v - 59);
+            let finalVal = value;
+            if (node.final) finalVal |= 0x20;
+            bits.write(finalVal, 6);
+        });
+        return bits.getData();
+    }
+}
+
+// --- FrozenTrie (Decoding/Verification) ---
+class FrozenTrieNode {
+    constructor(trie, index, letter, final, firstChild, childCount) {
+        this.trie = trie; this.index = index; this.letter = letter;
+        this.final = final; this.firstChild = firstChild; this.childCount = childCount;
+    }
+    getChildCount() { return this.childCount; }
+    getChild(index) { return this.trie.getNodeByIndex(this.firstChild + index); }
+}
+
+class FrozenTrie {
+    constructor(data, directoryData, nodeCount) {
+        this.data = new BitString(data);
+        this.directory = new RankDirectory(directoryData, data, nodeCount * 2 + 1, L1, L2);
+        this.letterStart = nodeCount * 2 + 1;
+    }
+    getNodeByIndex(index) {
+        const final = this.data.get(this.letterStart + index * 6, 1) === 1;
+        const chr = this.data.get(this.letterStart + index * 6 + 1, 5);
+        const letter = String.fromCharCode(((chr < 6) ? chr + 48 : chr + 59));
+        const firstChild = this.directory.select(0, index + 1) - index;
+        const childOfNextNode = this.directory.select(0, index + 2) - index - 1;
+        return new FrozenTrieNode(this, index, letter, final, firstChild, childOfNextNode - firstChild);
+    }
+    getRoot() { return this.getNodeByIndex(0); }
+    lookup(word) {
+        let node = this.getRoot();
+        const len = word.length;
+        for (let i = 0; i < len; i++) {
+            let child;
+            let j = 0;
+            const count = node.getChildCount();
+            for (; j < count; j++) {
+                child = node.getChild(j);
+                if (child.letter === word[i]) break;
+            }
+            if (j === count) return false;
+            node = child;
+        }
+        return node.final;
+    }
+}
+
+// --- App Logic ---
+
+let globalCompiledData = null;
+
+// Validació individual per a la funció de "Verificar" (un cop generat)
+function processCatalanWord(word) {
+    let processed = word.toUpperCase();
+    processed = processed.replace(/L·L/g, '2');
+    processed = processed.replace(/QU/g, 'Q');
+    processed = processed.replace(/NY/g, '3');
+    processed = processed.replace(/Ç/g, '1');
+    return processed;
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Obtenim la versió dels inputs
+    const dictVersion = document.getElementById('dictVersion').value.trim() || '1.0';
+
+    const statusEl = document.getElementById('processingStatus');
+    statusEl.textContent = 'Llegint i processant...';
+    statusEl.className = 'mt-2 text-sm font-medium text-blue-600 animate-pulse block';
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        // Use timeout to allow UI to render the "processing" message
+        setTimeout(() => {
+            try {
+                // OPTIMITZACIÓ 1: Processament de strings en bloc
+                // En lloc de fer regex paraula per paraula, fem replace a tot el text.
+                let content = evt.target.result.toUpperCase();
+                
+                // Ordre de substitucions
+                content = content.replace(/L·L/g, '2');
+                content = content.replace(/QU/g, 'Q');
+                content = content.replace(/NY/g, '3');
+                content = content.replace(/Ç/g, '1');
+
+                // Split i neteja
+                const rawWords = content.split(/\s+/);
+                
+                // Eliminem duplicats i buits usant un Set
+                const uniqueProcessed = new Set();
+                const len = rawWords.length;
+                for(let i=0; i<len; i++) {
+                    const w = rawWords[i];
+                    if(w.length > 0) uniqueProcessed.add(w);
+                }
+
+                // Ordenació necessària per al Trie
+                const sortedWords = Array.from(uniqueProcessed).sort();
+                
+                // Construcció del Trie
+                const trie = new Trie();
+                sortedWords.forEach(word => trie.insert(word));
+                
+                const trieData = trie.encode();
+                const directory = RankDirectory.Create(trieData, trie.getNodeCount() * 2 + 1, L1, L2);
+
+                const result = {
+                    nodeCount: trie.getNodeCount(),
+                    version: dictVersion,
+                    directory: directory.getData(),
+                    trie: trieData
+                };
+
+                const jsonStr = JSON.stringify(result, null, 4); // null, 4 per pretty print
+                
+                // Update UI
+                document.getElementById('outputArea').value = jsonStr;
+                globalCompiledData = result;
+                
+                statusEl.textContent = `Èxit! ${sortedWords.length} paraules úniques codificades. Versió: ${dictVersion}`;
+                statusEl.className = 'mt-2 text-sm font-medium text-green-600 block';
+                
+                document.getElementById('outputSection').classList.remove('hidden');
+                document.getElementById('verifySection').classList.remove('hidden');
+
+            } catch (err) {
+                console.error(err);
+                statusEl.textContent = 'Error processant el fitxer: ' + err.message;
+                statusEl.className = 'mt-2 text-sm font-medium text-red-600 block';
+            }
+        }, 50);
+    };
+    reader.readAsText(file);
+});
+
+document.getElementById('downloadBtn').addEventListener('click', function() {
+    const content = document.getElementById('outputArea').value;
+    if (!content) return;
+    
+    // Obtenim el nom del fitxer
+    let filename = document.getElementById('dictName').value.trim() || 'diccionari';
+    if (!filename.toLowerCase().endsWith('.json')) {
+        filename += '.json';
+    }
+
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+document.getElementById('verifyBtn').addEventListener('click', function() {
+    if (!globalCompiledData) return;
+    const input = document.getElementById('verifyInput');
+    const word = input.value.trim();
+    if (!word) return;
+
+    try {
+        const ftrie = new FrozenTrie(globalCompiledData.trie, globalCompiledData.directory, globalCompiledData.nodeCount);
+        const processed = processCatalanWord(word);
+        const exists = ftrie.lookup(processed);
+
+        const resEl = document.getElementById('verifyResult');
+        resEl.classList.remove('hidden');
+        if (exists) {
+            resEl.className = 'mt-4 p-4 rounded-lg font-bold text-center bg-green-100 text-green-800 border border-green-200';
+            resEl.innerHTML = `"${word}" ÉS al diccionari. <br><span class="text-xs font-normal opacity-75">(Codi intern: ${processed})</span>`;
+        } else {
+            resEl.className = 'mt-4 p-4 rounded-lg font-bold text-center bg-red-100 text-red-800 border border-red-200';
+            resEl.innerHTML = `"${word}" NO ÉS al diccionari. <br><span class="text-xs font-normal opacity-75">(Codi intern: ${processed})</span>`;
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error en verificar: " + e.message);
+    }
+});
+
+// Allow Enter key in verify input
+document.getElementById('verifyInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') document.getElementById('verifyBtn').click();
+});
+</script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

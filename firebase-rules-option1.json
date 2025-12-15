@@ -1,0 +1,8 @@
+{
+  "rules": {
+    // Opció 1: Només lectura pública, escriptura privada
+    // Útil si vols que tothom pugui veure les partides però només usuaris autenticats puguin crear-ne
+    ".read": true,
+    ".write": "auth != null"
+  }
+}
