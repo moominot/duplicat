@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ROW_LABELS, COL_LABELS } from '../constants';
@@ -15,13 +14,15 @@ const PlayerView: React.FC = () => {
   
   const { gameState, loading, error } = useGame(gameId);
 
+  // Helper per la clau de storage de la taula (per partida)
+  const tableStorageKey = (id?: string | null) => id ? `scrabble_table_num_${id}` : 'scrabble_table_num';
+
   // Login State
   const [storedName, setStoredName] = useState(localStorage.getItem('scrabble_player_name') || '');
-  const [storedTable, setStoredTable] = useState(localStorage.getItem('scrabble_table_num') || '');
-  
-  const [inputName, setInputName] = useState(storedName);
-  const [inputTable, setInputTable] = useState(storedTable);
-  const [isPlaying, setIsPlaying] = useState(!!storedName && !!storedTable);
+  const [storedTable, setStoredTable] = useState(''); // carregarem en useEffect quan tinguem gameId
+  const [inputName, setInputName] = useState(localStorage.getItem('scrabble_player_name') || '');
+  const [inputTable, setInputTable] = useState(''); // carregarem en useEffect
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Game State
   const [word, setWord] = useState('');
@@ -44,6 +45,18 @@ const PlayerView: React.FC = () => {
   useEffect(() => {
       if(!gameId) navigate('/');
   }, [gameId, navigate]);
+
+  // Carregar número de taula específic per partida (o fallback)
+  useEffect(() => {
+      const key = tableStorageKey(gameId);
+      const val = localStorage.getItem(key) || '';
+      setStoredTable(val);
+      setInputTable(val);
+      // Si hi ha nom i taula, estem "jugant"
+      const nameFromStorage = localStorage.getItem('scrabble_player_name') || storedName;
+      setIsPlaying(!!nameFromStorage && !!val);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
 
   useEffect(() => {
       if (gameState) {
@@ -87,10 +100,16 @@ const PlayerView: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
       e.preventDefault();
       if (inputName.trim() && inputTable.trim()) {
+          // Guardem nom (global)
           localStorage.setItem('scrabble_player_name', inputName.trim());
-          localStorage.setItem('scrabble_table_num', inputTable.trim());
           setStoredName(inputName.trim());
+          setInputName(inputName.trim());
+
+          // Guardem taula amb clau dependient de la partida
+          const key = tableStorageKey(gameId);
+          localStorage.setItem(key, inputTable.trim());
           setStoredTable(inputTable.trim());
+          setInputTable(inputTable.trim());
           setIsPlaying(true);
           
           // Registrar el participant immediatament
@@ -110,8 +129,13 @@ const PlayerView: React.FC = () => {
 
   const handleLogout = () => {
       setIsPlaying(false);
+      // Netejem nom (global) i taula només de la partida actual
       localStorage.removeItem('scrabble_player_name');
-      localStorage.removeItem('scrabble_table_num');
+      localStorage.removeItem(tableStorageKey(gameId));
+      setStoredTable('');
+      setInputTable('');
+      setStoredName('');
+      setInputName('');
   };
 
   const handleWordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,7 +313,7 @@ const PlayerView: React.FC = () => {
               type="text"
               value={word}
               onChange={handleWordChange}
-              className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-3xl font-mono font-bold tracking-widest uppercase text-center focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none"
+              className="w-full p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-3xl font-mono font-bold tracking-widest uppercase text-center focus:ring-4 focus:ring-blue-100 focus:border-blue-400"
               placeholder="PARAULA..."
               autoComplete="off"
             />
