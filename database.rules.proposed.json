@@ -1,0 +1,47 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".read": true
+      }
+    },
+    "masters": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (root.child('masters').child(auth.uid).child('role').val() === 'superuser' || (!data.exists() && newData.child('role').val() === 'user'))",
+        ".validate": "newData.hasChildren(['role', 'email']) && (newData.child('role').val() === 'superuser' || newData.child('role').val() === 'master' || newData.child('role').val() === 'user') && (!data.exists() || newData.child('email').val() === data.child('email').val())"
+      }
+    },
+    "games": {
+      "$gameId": {
+        ".read": true,
+        ".write": "auth != null && (root.child('masters').child(auth.uid).child('role').val() === 'superuser' || (root.child('masters').child(auth.uid).child('role').val() === 'master' && (!data.exists() || data.child('masterId').val() === auth.uid)))",
+        ".validate": "newData.hasChild('masterId')"
+      }
+    },
+    "publicGames": {
+      ".read": true,
+      ".indexOn": "masterId",
+      "$gameId": {
+        ".write": "auth != null && root.child('games').child($gameId).child('masterId').val() === auth.uid"
+      }
+    },
+    "playerPlays": {
+      "$gameId": {
+        "rounds": {
+          "$roundId": {
+            // The master of the game can read all plays for their game
+            ".read": "auth != null && root.child('games').child($gameId).child('masterId').val() === auth.uid",
+            "$playerId": {
+              // Anyone can write a new play for a specific player (by name or generated ID)
+              // but they cannot read any plays or edit existing ones.
+              ".write": "!data.exists() && newData.hasChildren(['playerName', 'move', 'score'])",
+              ".read": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,8 +1,24 @@
+
 {
   "rules": {
-    // Opció 1: Només lectura pública, escriptura privada
-    // Útil si vols que tothom pugui veure les partides però només usuaris autenticats puguin crear-ne
-    ".read": true,
-    ".write": "auth != null"
+    "users": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".read": true
+      }
+    },
+    "masters": {
+      "$uid": {
+        ".write": "auth != null && root.child('users').child(auth.uid).child('isSuperuser').val() === true",
+        ".read": true
+      }
+    },
+    "games": {
+      "$gameId": {
+        ".read": true,
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('isSuperuser').val() === true || (root.child('masters').hasChild(auth.uid) && (!data.exists() || data.child('masterId').val() === auth.uid)))",
+        ".validate": "newData.hasChild('masterId')"
+      }
+    }
   }
 }

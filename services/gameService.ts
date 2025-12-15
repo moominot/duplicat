@@ -1,4 +1,3 @@
-
 import { db } from '../firebaseConfig';
 import { GameState, PlayerMove, RoundStatus, GameConfig, Participant, RoundData, BoardCell } from '../types';
 import { createInitialBoard, calculateRemainingBag, calculateMoveScore } from '../utils/scrabbleUtils';
@@ -254,17 +253,17 @@ export const importEliotGameAsGroup = async (gameId: string, xmlString: string, 
 
 // --- LOBBY & CREATION ---
 
-export const createNewGame = async (hostName: string): Promise<string> => {
+export const createNewGame = async (hostName: string, masterId: string): Promise<string> => {
     const gamesRef = db.ref('games');
     const newGameRef = gamesRef.push();
     const gameId = newGameRef.key;
     if (!gameId) throw new Error("Error generant ID");
 
     const initialBoard = createInitialBoard();
-    // Start with empty rack as requested - Master will fill it manually or auto-fill
     const initialRack: string[] = []; 
 
     const initialData = {
+        masterId: masterId,
         currentRound: 1,
         board: initialBoard, 
         currentRack: initialRack, 
@@ -295,7 +294,8 @@ export const createNewGame = async (hostName: string): Promise<string> => {
         id: gameId,
         host: hostName,
         createdAt: Date.now(),
-        round: 1
+        round: 1,
+        masterId: masterId,
     };
     await db.ref(`publicGames/${gameId}`).set(metadata);
 
@@ -313,6 +313,20 @@ export const getPublicGames = async () => {
         return [];
     }
 };
+
+export const getGamesByMaster = async (masterId: string) => {
+    try {
+        const gamesRef = db.ref('publicGames');
+        const snapshot = await gamesRef.orderByChild('masterId').equalTo(masterId).get();
+        if (!snapshot.exists()) return [];
+        const data = snapshot.val();
+        return Object.values(data).sort((a: any, b: any) => b.createdAt - a.createdAt);
+    } catch (e) {
+        console.error("Error getting games by master:", e);
+        return [];
+    }
+};
+
 
 // --- GAMEPLAY ACTIONS ---
 
@@ -718,7 +732,6 @@ export const finalizeRound = async (gameId: string, masterMove: PlayerMove) => {
     updates[`games/${gameId}/timerEndTime`] = null;
     updates[`games/${gameId}/timerPausedRemaining`] = null;
     updates[`publicGames/${gameId}/round`] = nextRoundNum;
-
     await db.ref().update(updates);
     await recalculateAllScores(gameId);
 };

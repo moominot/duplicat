@@ -1,8 +1,0 @@
-{
-  "rules": {
-    // Opció 2: Obert per a tothom (útil per desenvolupament/testing)
-    // NO recomanat per producció
-    ".read": true,
-    ".write": true
-  }
-}

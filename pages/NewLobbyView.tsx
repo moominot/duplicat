@@ -1,9 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createNewGame, getPublicGames } from '../services/gameService';
+import { useNavigate, Link } from 'react-router-dom';
+import { createNewGame, getPublicGames, getGamesByMaster } from '../services/gameService';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getDatabase, ref, get } from 'firebase/database';
+import { signOut } from 'firebase/auth';
 
-const LobbyView: React.FC = () => {
+const NewLobbyView: React.FC = () => {
   const navigate = useNavigate();
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,20 +15,45 @@ const LobbyView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [helpTab, setHelpTab] = useState<'intro' | 'manual' | 'config' | 'faq'>('intro');
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    loadGames();
-  }, []);
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user);
+        const db = getDatabase();
+        const userRoleRef = ref(db, `masters/${user.uid}/role`);
+        const snapshot = await get(userRoleRef);
+        if (snapshot.exists()) {
+          const role = snapshot.val();
+          setUserRole(role);
+          loadGames(role, user.uid);
+        } else {
+          loadGames('user', null);
+        }
+      } else {
+        navigate('/auth');
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
-  const loadGames = async () => {
+  const loadGames = async (role: string, uid: string | null) => {
     setLoading(true);
     try {
-        const list = await getPublicGames();
-        setGames(list);
+      let list;
+      if ((role === 'master' ) && uid) {
+        list = await getGamesByMaster(uid);
+      } else {
+        list = await getPublicGames();
+      }
+      setGames(list);
     } catch (e) {
-        console.error("Error carregant partides:", e);
+      console.error("Error carregant partides:", e);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -37,8 +65,10 @@ const LobbyView: React.FC = () => {
     setErrorMsg(null);
 
     try {
-        const gameId = await createNewGame(hostName);
+      if(user) {
+        const gameId = await createNewGame(hostName, user.uid);
         navigate(`/master?gameId=${gameId}`);
+      }
     } catch (error: any) {
         console.error("Error detallat:", error);
         let msg = "Error desconegut creant la partida.";
@@ -58,6 +88,16 @@ const LobbyView: React.FC = () => {
   const joinGame = (gameId: string, role: 'player' | 'master' | 'projector') => {
       navigate(`/${role}?gameId=${gameId}`);
   };
+  
+  const handleLogout = async () => {
+    const auth = getAuth();
+    try {
+        await signOut(auth);
+        navigate('/');
+    } catch (error) {
+        console.error("Error durant el tancament de sessió:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-700">
@@ -70,6 +110,14 @@ const LobbyView: React.FC = () => {
           >
             <span className="text-xl">?</span> Ajuda i Manual
           </button>
+          {user && (
+            <button 
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-medium transition-colors px-4 py-2 rounded-full hover:bg-white hover:shadow-sm"
+            >
+              <span className="text-xl"></span> Tancar Sessió
+            </button>
+          )}
       </nav>
 
       <div className="max-w-5xl mx-auto px-4 pb-12 space-y-12">
@@ -94,10 +142,11 @@ const LobbyView: React.FC = () => {
             <div className="md:col-span-7 lg:col-span-8 space-y-6">
                 <div className="flex justify-between items-center px-2">
                     <h2 className="text-2xl font-bold text-slate-700 flex items-center gap-2">
-                        <span className="text-3xl">🌍</span> Partides en Curs
+                        <span className="text-3xl">🌍</span>
+                        {userRole === 'master' ? 'Les Teves Partides' : 'Partides en Curs'}
                     </h2>
                     <button 
-                        onClick={loadGames} 
+                        onClick={() => user && loadGames(userRole || 'user', user.uid)} 
                         className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
                     >
                         ↻ Actualitzar
@@ -170,6 +219,7 @@ const LobbyView: React.FC = () => {
 
             {/* COLUMNA DRETA: Crear Partida (4/12) */}
             <div className="md:col-span-5 lg:col-span-4 sticky top-8">
+                {(userRole === 'master' || userRole === 'superuser') ? (
                 <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl">
                     <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800 border-b pb-4 border-slate-100">
                         <span>🚀</span> Crear Nova Partida
@@ -207,6 +257,12 @@ const LobbyView: React.FC = () => {
                         </p>
                     </form>
                 </div>
+                ) : (
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl text-center">
+                         <p className="text-slate-600 text-lg font-medium">Benvingut!</p>
+                         <p className="text-slate-400 text-sm mt-2">Per crear una partida, has de ser un usuari màster.</p>
+                     </div>
+                )}
 
                 {/* Mini Footer */}
                 <div className="mt-8 text-center">
@@ -214,6 +270,11 @@ const LobbyView: React.FC = () => {
                         Scrabble DupliCat v2.0
                         <br/>Desenvolupat per a la comunitat.
                     </p>
+                    {userRole === 'superuser' && (
+                       <p className="text-xs text-slate-400 mt-2">
+                            <Link to="/master-registration" className="text-indigo-600 hover:underline">Registrar nou màster</Link>
+                       </p> 
+                    )}
                 </div>
             </div>
         </div>
@@ -392,4 +453,4 @@ const LobbyView: React.FC = () => {
   );
 };
 
-export default LobbyView;
+export default NewLobbyView;
