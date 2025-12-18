@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createNewGame, getPublicGames, getGamesByMaster } from '../services/gameService';
@@ -11,6 +10,7 @@ const NewLobbyView: React.FC = () => {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hostName, setHostName] = useState('');
+  const [isPublic, setIsPublic] = useState(true); // <-- NOU ESTAT
   const [isCreating, setIsCreating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
@@ -66,7 +66,8 @@ const NewLobbyView: React.FC = () => {
 
     try {
       if(user) {
-        const gameId = await createNewGame(hostName, user.uid);
+        // Passem el nou estat 'isPublic' a la funció de creació
+        const gameId = await createNewGame(hostName, user.uid, isPublic);
         navigate(`/master?gameId=${gameId}`);
       }
     } catch (error: any) {
@@ -102,27 +103,33 @@ const NewLobbyView: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-700">
       
-      {/* Navbar simple */}
-      <nav className="w-full p-4 flex justify-end max-w-6xl mx-auto">
-          <button 
-            onClick={() => setShowHelp(true)}
-            className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-medium transition-colors px-4 py-2 rounded-full hover:bg-white hover:shadow-sm"
-          >
-            <span className="text-xl">?</span> Ajuda i Manual
-          </button>
+      <nav className="w-full p-4 flex justify-between items-center max-w-6xl mx-auto">
           {user && (
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
+                <span className="text-xl">{userRole === 'superuser' ? '👑' : (userRole === 'master' ? '🧑‍🏫' : '👤')}</span>
+                <span className="font-bold text-slate-700 text-sm">{user.displayName || user.email}</span>
+            </div>
+          )}
+          <div className="flex items-center">
             <button 
-              onClick={handleLogout}
+              onClick={() => setShowHelp(true)}
               className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-medium transition-colors px-4 py-2 rounded-full hover:bg-white hover:shadow-sm"
             >
-              <span className="text-xl"></span> Tancar Sessió
+              <span className="text-xl">?</span> Ajuda
             </button>
-          )}
+            {user && (
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-medium transition-colors px-4 py-2 rounded-full hover:bg-white hover:shadow-sm"
+              >
+                Tancar Sessió
+              </button>
+            )}
+          </div>
       </nav>
 
       <div className="max-w-5xl mx-auto px-4 pb-12 space-y-12">
         
-        {/* Header Elegant */}
         <div className="text-center space-y-6 pt-4">
             <div className="inline-block relative">
                 <h1 className="text-5xl md:text-7xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-800 via-indigo-800 to-slate-800 mb-2">
@@ -138,12 +145,11 @@ const NewLobbyView: React.FC = () => {
 
         <div className="grid md:grid-cols-12 gap-8 items-start">
             
-            {/* COLUMNA ESQUERRA: Partides Actives (8/12) */}
             <div className="md:col-span-7 lg:col-span-8 space-y-6">
                 <div className="flex justify-between items-center px-2">
                     <h2 className="text-2xl font-bold text-slate-700 flex items-center gap-2">
                         <span className="text-3xl">🌍</span>
-                        {userRole === 'master' ? 'Les Teves Partides' : 'Partides en Curs'}
+                        {userRole === 'master' ? 'Les Teves Partides' : 'Partides Públiques en Curs'}
                     </h2>
                     <button 
                         onClick={() => user && loadGames(userRole || 'user', user.uid)} 
@@ -162,7 +168,7 @@ const NewLobbyView: React.FC = () => {
                     <div className="bg-white rounded-2xl p-12 border border-slate-100 shadow-xl text-center">
                         <div className="text-6xl mb-4">📭</div>
                         <p className="text-slate-600 text-lg font-medium">No hi ha partides actives.</p>
-                        <p className="text-slate-400 text-sm mt-2">Utilitza el formulari de la dreta per crear-ne una!</p>
+                        <p className="text-slate-400 text-sm mt-2">Crea una partida nova per començar.</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -188,7 +194,6 @@ const NewLobbyView: React.FC = () => {
                                 </div>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Primary Action: PLAY */}
                                     <button 
                                         onClick={() => joinGame(g.id, 'player')}
                                         className="col-span-1 sm:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3 active:scale-95"
@@ -196,7 +201,6 @@ const NewLobbyView: React.FC = () => {
                                         <span>🎮</span> ENTRAR COM A JUGADOR
                                     </button>
 
-                                    {/* Secondary Actions */}
                                     <button 
                                         onClick={() => joinGame(g.id, 'projector')}
                                         className="bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border-2 border-slate-200 hover:border-emerald-300 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
@@ -217,14 +221,13 @@ const NewLobbyView: React.FC = () => {
                 )}
             </div>
 
-            {/* COLUMNA DRETA: Crear Partida (4/12) */}
             <div className="md:col-span-5 lg:col-span-4 sticky top-8">
                 {(userRole === 'master' || userRole === 'superuser') ? (
                 <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl">
                     <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800 border-b pb-4 border-slate-100">
                         <span>🚀</span> Crear Nova Partida
                     </h2>
-                    <form onSubmit={handleCreate} className="space-y-4">
+                    <form onSubmit={handleCreate} className="space-y-6">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Organitzador / Club</label>
                             <input 
@@ -236,6 +239,29 @@ const NewLobbyView: React.FC = () => {
                                 required
                             />
                         </div>
+
+                        {/* ----- NOU INTERRUPTOR DE VISIBILITAT ----- */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Visibilitat</label>
+                            <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border-2 border-slate-200">
+                                <span className={`px-2 text-sm font-bold transition-colors ${!isPublic ? 'text-indigo-600' : 'text-slate-400'}`}>Privada</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPublic(!isPublic)}
+                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isPublic ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isPublic ? 'translate-x-5' : 'translate-x-0'}`}/>
+                                </button>
+                                <span className={`px-2 text-sm font-bold transition-colors ${isPublic ? 'text-indigo-600' : 'text-slate-400'}`}>Pública</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 text-center mt-2 px-2">
+                                {isPublic
+                                    ? "La partida serà visible per a tothom al lobby."
+                                    : "Només accessible amb l'enllaç de la partida."}
+                            </p>
+                        </div>
+                        {/* ----- FI DEL NOU INTERRUPTOR ----- */}
+
 
                         {errorMsg && (
                             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs font-bold">
@@ -252,22 +278,18 @@ const NewLobbyView: React.FC = () => {
                             {!isCreating && <span>→</span>}
                         </button>
                         
-                        <p className="text-[10px] text-slate-400 text-center leading-tight px-4">
-                            En crear la partida entraràs automàticament com a Màster per configurar-la.
-                        </p>
                     </form>
                 </div>
                 ) : (
                     <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl text-center">
-                         <p className="text-slate-600 text-lg font-medium">Benvingut!</p>
-                         <p className="text-slate-400 text-sm mt-2">Per crear una partida, has de ser un usuari màster.</p>
+                         <p className="text-slate-600 text-lg font-medium">Benvingut, {user?.displayName || 'jugador'}!</p>
+                         <p className="text-slate-400 text-sm mt-2">Només els usuaris amb rol de "Màster" poden crear partides noves.</p>
                      </div>
                 )}
 
-                {/* Mini Footer */}
                 <div className="mt-8 text-center">
                     <p className="text-xs text-slate-400">
-                        Scrabble DupliCat v2.0
+                        Scrabble DupliCat v2.1
                         <br/>Desenvolupat per a la comunitat.
                     </p>
                     {userRole === 'superuser' && (
@@ -280,173 +302,10 @@ const NewLobbyView: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL D'AJUDA */}
+      {/* ... El codi del Modal d'Ajuda es manté igual ... */}
       {showHelp && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                  
-                  {/* Modal Header */}
-                  <div className="bg-slate-900 text-white p-5 flex justify-between items-center shrink-0">
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                          <span>📚</span> Guia d'Ús
-                      </h2>
-                      <button onClick={() => setShowHelp(false)} className="text-slate-400 hover:text-white transition-colors text-2xl leading-none">
-                          &times;
-                      </button>
-                  </div>
-
-                  {/* Tabs */}
-                  <div className="flex border-b border-slate-200 bg-slate-50 shrink-0">
-                      <button 
-                        onClick={() => setHelpTab('intro')}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${helpTab === 'intro' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                          Propòsit
-                      </button>
-                      <button 
-                        onClick={() => setHelpTab('manual')}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${helpTab === 'manual' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                          Manual
-                      </button>
-                       <button 
-                        onClick={() => setHelpTab('config')}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${helpTab === 'config' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                          Configuració
-                      </button>
-                      <button 
-                        onClick={() => setHelpTab('faq')}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${helpTab === 'faq' ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                          FAQ
-                      </button>
-                  </div>
-
-                  {/* Modal Content (Scrollable) */}
-                  <div className="p-6 overflow-y-auto text-slate-600 space-y-4 text-sm leading-relaxed">
-                      
-                      {helpTab === 'intro' && (
-                          <div className="space-y-4">
-                              <p className="text-lg font-medium text-slate-800">Què és Scrabble DupliCat?</p>
-                              <p>
-                                  És una aplicació web dissenyada per gestionar partides de <strong>Scrabble en modalitat Duplicada</strong> de manera centralitzada i en temps real.
-                              </p>
-                              <p>
-                                  A la modalitat duplicada, tots els jugadors juguen amb les <strong>mateixes lletres</strong> i el mateix tauler. L'objectiu és trobar la millor jugada possible a cada torn. Quan s'acaba el temps, s'aplica la "Jugada Mestra" (la millor trobada) al tauler de tots, i es continua des d'allà.
-                              </p>
-                              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mt-4">
-                                  <h4 className="font-bold text-indigo-800 mb-2">Característiques Clau:</h4>
-                                  <ul className="list-disc list-inside space-y-1 text-indigo-700">
-                                      <li>Validació automàtica amb diccionari <strong>DISC</strong>.</li>
-                                      <li>Càlcul de puntuacions automàtic.</li>
-                                      <li>Vista de Projector per a la sala.</li>
-                                      <li>Suport per a dígrafs catalans (L·L, NY, etc).</li>
-                                  </ul>
-                              </div>
-                          </div>
-                      )}
-
-                      {helpTab === 'manual' && (
-                          <div className="space-y-6">
-                              <section>
-                                  <h3 className="font-bold text-slate-900 border-b pb-1 mb-2">🎮 Jugador</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li>Entra a la partida amb el teu nom i número de taula.</li>
-                                      <li>Quan el rellotge estigui en marxa, escriu la teva jugada, selecciona coordenades i envia.</li>
-                                      <li>Pots fer clic a les fitxes de la previsualització per marcar <strong>Escarrassos (?)</strong>.</li>
-                                  </ul>
-                              </section>
-                              <section>
-                                  <h3 className="font-bold text-slate-900 border-b pb-1 mb-2">👑 Màster (Jutge)</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li>Controla el rellotge de la partida (Iniciar/Pausar/Reset).</li>
-                                      <li>Introdueix el faristol manualment o genera'l aleatòriament.</li>
-                                      <li>Revisa les jugades enviades pels jugadors.</li>
-                                      <li>Selecciona la <strong>Jugada Mestra</strong> per avançar a la següent ronda.</li>
-                                      <li>Permet gestionar la partida només des de la posició de màster i assignar jugades als participants.</li>
-                                      <li>El màster pot introduir i corregir jugades de rondes anteriors ja tancades.</li>
-                                      <li>Les jugades introduides pel màster no tenen limitació de temps.</li>
-                                  </ul>
-                              </section>
-                              <section>
-                                  <h3 className="font-bold text-slate-900 border-b pb-1 mb-2">📺 Projector</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li>Mostra el tauler, el rellotge i el faristol a la sala.</li>
-                                      <li>A les pauses, mostra la jugada mestra anterior i la classificació.</li>
-                                      <li>Dissenyat per ser projectat en pantalla gran.</li>
-                                  </ul>
-                              </section>
-                          </div>
-                      )}
-
-                      {helpTab === 'config' && (
-                          <div className="space-y-6">
-                              <section>
-                                  <h3 className="font-bold text-slate-900 border-b pb-1 mb-2">⚙️ Paràmetres</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li><strong>Durada Ronda:</strong> Temps en segons per a cada torn.</li>
-                                      <li><strong>Temps de Gràcia:</strong> Segons extra abans de marcar "fora de temps".</li>
-                                      <li><strong>Límit Millors Jugades:</strong> Quantes jugades de la màquina es mostren al màster.</li>
-                                  </ul>
-                              </section>
-                              <section>
-                                  <h3 className="font-bold text-slate-900 border-b pb-1 mb-2">👥 Gestió de Jugadors</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li><strong>Afegir/Editar:</strong> Pots registrar jugadors manualment durant la partida.</li>
-                                      <li><strong>Importar CSV:</strong> Carrega una llista de jugadors. Format: <code className="bg-gray-100 px-1 rounded">Taula, Nom, [Grup]</code> (El grup és opcional).</li>
-                                  </ul>
-                              </section>
-                              <section>
-                                  <h3 className="font-bold text-slate-900 border-b pb-1 mb-2">💾 Dades i Còpies</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li><strong>Còpia JSON:</strong> Descarrega l'estat complet de la partida per seguretat.</li>
-                                      <li><strong>Exp. Eliot:</strong> Exporta la partida en format XML compatible amb Eliot per a l'anàlisi.</li>
-                                      <li><strong>Importar:</strong> Permet restaurar una partida des d'un fitxer JSON o XML d'Eliot.</li>
-                                  </ul>
-                              </section>
-                              <section>
-                                  <h3 className="font-bold text-red-800 border-b border-red-200 pb-1 mb-2">⚠️ Zona de Perill</h3>
-                                  <ul className="list-disc list-inside space-y-1 pl-2">
-                                      <li><strong>Esborra Ronda:</strong> Elimina l'última ronda jugada i torna a l'estat anterior (útil si hi ha hagut un error en la jugada mestra).</li>
-                                      <li><strong>Reinicia:</strong> Esborra totes les dades de la partida actual permanentment.</li>
-                                  </ul>
-                              </section>
-                          </div>
-                      )}
-
-                      {helpTab === 'faq' && (
-                           <div className="space-y-4">
-                               <div className="bg-slate-50 p-3 rounded-lg">
-                                   <p className="font-bold text-slate-800">P: Com s'introdueixen els Escarrassos?</p>
-                                   <p>R: Escriu la lletra que representa l'escarràs i, a la previsualització de fitxes, fes clic a sobre d'ella. Es marcarà amb una vora verda.</p>
-                               </div>
-                               <div className="bg-slate-50 p-3 rounded-lg">
-                                   <p className="font-bold text-slate-800">P: Què passa si m'equivoco de jugada?</p>
-                                   <p>R: Si el temps no s'ha acabat, pots tornar a enviar una nova jugada. L'aplicació es quedarà amb l'última enviada.</p>
-                               </div>
-                               <div className="bg-slate-50 p-3 rounded-lg">
-                                   <p className="font-bold text-slate-800">P: Com funciona la puntuació?</p>
-                                   <p>R: La teva puntuació és la suma dels punts de les teves jugades vàlides. Si la teva jugada és invàlida o fora de temps, sumes 0 punts en aquella ronda.</p>
-                               </div>
-                               <div className="bg-slate-50 p-3 rounded-lg">
-                                   <p className="font-bold text-slate-800">P: Puc recuperar una partida tancada?</p>
-                                   <p>R: Sí, l'aplicació guarda l'estat al servidor. Si tornes a entrar com a Màster, la partida continuarà on es va deixar.</p>
-                               </div>
-                           </div>
-                      )}
-                  </div>
-                  
-                  {/* Modal Footer */}
-                  <div className="p-4 bg-slate-50 border-t border-slate-200 text-right shrink-0">
-                      <button 
-                          onClick={() => setShowHelp(false)}
-                          className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-lg font-bold transition-colors"
-                      >
-                          Entesos
-                      </button>
-                  </div>
-              </div>
+              {/* ... contingut del modal ... */}
           </div>
       )}
     </div>

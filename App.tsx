@@ -16,10 +16,10 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<AuthView />} />
         <Route path="/lobby" element={<NewLobbyView />} />
-        <Route path="/player" element={<PlayerView />} />
-        <Route path="/master" element={<MasterView />} />
-        <Route path="/settings" element={<SettingsView />} />
-        <Route path="/projector" element={<ProjectorView />} />
+        <Route path="/player/:gameId" element={<PlayerView />} />
+        <Route path="/master/:gameId" element={<MasterView />} />
+        <Route path="/settings/:gameId" element={<SettingsView />} />
+        <Route path="/projector/:gameId" element={<ProjectorView />} />
         <Route path="/jugadoronline" element={<OnlinePlayerView />} />
         <Route path="/master-registration" element={<MasterRegistration />} />
       </Routes>
