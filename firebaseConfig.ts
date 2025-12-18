@@ -1,5 +1,7 @@
-import firebase from "firebase/compat/app";
-import "firebase/compat/database";
+
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -13,6 +15,12 @@ const firebaseConfig = {
   appId: "1:831532666384:web:c9d02cb6176d3ff5b5c495"
 };
 
-// Initialize Firebase (Compat)
-const app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app();
-export const db = app.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Get a reference to the database service and export it
+export const db = getDatabase(app);
+
+// Get a reference to the auth service and export it
+export const auth = getAuth(app);
+
